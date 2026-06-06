@@ -1,0 +1,37 @@
+{
+  "name": "agent-tickets-3b",
+  "version": "1.0.0",
+  "description": "Agente de análisis de tickets empresariales usando Claude Agent SDK",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "chat": "tsx src/index.ts chat",
+    "scheduled": "tsx src/index.ts scheduled",
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "test:connection": "tsx src/test-connection.ts",
+    "test:agent": "tsx src/test-agent.ts",
+    "test:fabric": "tsx src/test-fabric-agent.ts",
+    "test:full": "tsx src/test-agent-full.ts",
+    "test:flow": "tsx src/test-full-flow.ts",
+    "test:ontology": "tsx src/test-ontology.ts",
+    "test:template": "tsx src/test-template.ts",
+    "test:sp": "tsx src/test-service-principal.ts",
+    "preview-email": "tsx src/preview-email.ts",
+    "send-email": "tsx src/send-official-email.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "*",
+    "zod": "*",
+    "dotenv": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
