@@ -39,6 +39,7 @@ jobs:
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
           FABRIC_MCP_URL: ${{ secrets.FABRIC_MCP_URL }}
+          FABRIC_OPENAI_URL: ${{ secrets.FABRIC_OPENAI_URL }}
           SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
           REPORT_RECIPIENTS: ${{ secrets.REPORT_RECIPIENTS }}
           REPORT_FROM_EMAIL: ${{ secrets.REPORT_FROM_EMAIL }}
