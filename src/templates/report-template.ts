@@ -775,3 +775,200 @@ export function generateReportHTML(data: ReportData): string {
 </body>
 </html>`;
 }
+
+// =============================================================================
+// Template email-compatible (tablas HTML, Outlook-safe)
+// Usado por send-official y scheduled
+// =============================================================================
+
+export interface FabricData {
+  totalTickets: number;
+  abiertos: number;
+  cerrados: number;
+  vencidos: number;
+  sinAsignar: number;
+  porcentajeCierre: number;
+  ticketsHoy: number;
+  estaSemana: number;
+  esteMes: number;
+  diasPromedioHastaCerrar: string;
+  porcentajeCumplimientoSLA: number;
+  creadosPct: number;
+  cerradosPct: number;
+  distribucionCategoria: Array<{ nombre: string; cantidad: number }>;
+  slaCompliant: number;
+  slaExceeded: number;
+  distribucionCanal: Array<{ nombre: string; cantidad: number }>;
+  distribucionTipo: Array<{ nombre: string; cantidad: number }>;
+}
+
+export function generateHTMLFromFabricData(data: FabricData): string {
+  const today = new Date();
+  const dateStr = `${String(today.getDate()).padStart(2, "0")} de ${["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"][today.getMonth()]} del ${today.getFullYear()}`;
+
+  const generateDistributionRow = (nombre: string, cantidad: number, maxQty: number, porcentaje: number) => {
+    const barWidth = (cantidad / maxQty) * 100;
+    return `<tr>
+                    <td class="bar-label" width="130" valign="middle" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#333333;font-weight:bold;padding:5px 10px 5px 0;">${nombre}</td>
+                    <td valign="middle" style="padding:5px 0;">
+                      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f0f0f0" style="background-color:#f0f0f0;border-radius:3px;">
+                        <tr><td><table role="presentation" width="${barWidth}%" cellpadding="0" cellspacing="0" border="0"><tr>
+                          <td bgcolor="#ed712a" align="right" style="background-color:#ed712a;border-radius:3px;height:22px;line-height:22px;mso-line-height-rule:exactly;padding:0 6px;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:10px;font-weight:bold;white-space:nowrap;">${cantidad}</td>
+                        </tr></table></td></tr>
+                      </table>
+                    </td>
+                    <td width="48" valign="middle" align="right" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#666666;padding:5px 0 5px 8px;">${porcentaje.toFixed(1)}%</td>
+                  </tr>`;
+  };
+
+  const maxCategory = Math.max(...data.distribucionCategoria.map(c => c.cantidad), 1);
+  const categoriaRows = data.distribucionCategoria
+    .map(cat => generateDistributionRow(cat.nombre, cat.cantidad, maxCategory, (cat.cantidad / Math.max(data.totalTickets, 1)) * 100))
+    .join("\n");
+
+  const maxCanal = Math.max(...data.distribucionCanal.map(c => c.cantidad), 1);
+  const canalRows = data.distribucionCanal
+    .map(canal => generateDistributionRow(canal.nombre, canal.cantidad, maxCanal, (canal.cantidad / Math.max(data.totalTickets, 1)) * 100))
+    .join("\n");
+
+  const maxTipo = Math.max(...data.distribucionTipo.map(t => t.cantidad), 1);
+  const tipoRows = data.distribucionTipo
+    .map(tipo => generateDistributionRow(tipo.nombre, tipo.cantidad, maxTipo, (tipo.cantidad / Math.max(data.totalTickets, 1)) * 100))
+    .join("\n");
+
+  const slaTotal = data.slaCompliant + data.slaExceeded;
+  const slaCompliantPct = slaTotal > 0 ? (data.slaCompliant / slaTotal) * 100 : 0;
+  const slaExceededPct = 100 - slaCompliantPct;
+
+  return `<!DOCTYPE html>
+<html lang="es" xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>Reporte de Tickets - Tiendas 3B</title>
+  <style>
+    body,table,td{margin:0;padding:0;}
+    table{border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;}
+    body{width:100%!important;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;}
+    @media only screen and (max-width:600px){
+      .email-container{width:100%!important;}
+      .kpi-cell{display:block!important;width:100%!important;box-sizing:border-box!important;padding:0 0 8px 0!important;}
+      .bar-label{width:110px!important;}
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f4;font-family:Arial,Helvetica,sans-serif;color:#333333;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" bgcolor="#f4f4f4">
+    <tr><td align="center" style="padding:20px 10px;">
+      <table role="presentation" class="email-container" width="640" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="width:640px;max-width:640px;background-color:#ffffff;">
+        <tr>
+          <td bgcolor="#ed712a" align="center" style="background-color:#ed712a;padding:30px 24px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr><td align="center" style="font-family:Arial,Helvetica,sans-serif;color:#ffffff;font-size:28px;font-weight:bold;line-height:32px;padding-bottom:8px;">Reporte de Tickets - Tiendas 3B</td></tr>
+              <tr><td align="center" style="font-family:Arial,Helvetica,sans-serif;color:#ffffff;font-size:14px;line-height:18px;">${dateStr}</td></tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:15px 20px 0 20px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td class="kpi-cell" valign="top" width="16.66%" style="padding:0 3px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e0e0e0;border-radius:4px;"><tr><td style="padding:12px;"><div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#999999;text-transform:uppercase;letter-spacing:0.5px;font-weight:bold;padding-bottom:6px;">Total</div><div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;color:#1a1a1a;">${data.totalTickets}</div></td></tr></table></td>
+                <td class="kpi-cell" valign="top" width="16.66%" style="padding:0 3px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e0e0e0;border-radius:4px;"><tr><td style="padding:12px;"><div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#999999;text-transform:uppercase;letter-spacing:0.5px;font-weight:bold;padding-bottom:6px;">Abiertos</div><div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;color:#3498db;">${data.abiertos}</div></td></tr></table></td>
+                <td class="kpi-cell" valign="top" width="16.66%" style="padding:0 3px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e0e0e0;border-radius:4px;"><tr><td style="padding:12px;"><div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#999999;text-transform:uppercase;letter-spacing:0.5px;font-weight:bold;padding-bottom:6px;">Cerrados</div><div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;color:#27ae60;">${data.cerrados}</div></td></tr></table></td>
+                <td class="kpi-cell" valign="top" width="16.66%" style="padding:0 3px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e0e0e0;border-radius:4px;"><tr><td style="padding:12px;"><div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#999999;text-transform:uppercase;letter-spacing:0.5px;font-weight:bold;padding-bottom:6px;">Vencidos</div><div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;color:#e74c3c;">${data.vencidos}</div></td></tr></table></td>
+                <td class="kpi-cell" valign="top" width="16.66%" style="padding:0 3px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e0e0e0;border-radius:4px;"><tr><td style="padding:12px;"><div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#999999;text-transform:uppercase;letter-spacing:0.5px;font-weight:bold;padding-bottom:6px;">Sin Asignar</div><div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;color:#1a1a1a;">${data.sinAsignar}</div></td></tr></table></td>
+                <td class="kpi-cell" valign="top" width="16.66%" style="padding:0 3px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e0e0e0;border-radius:4px;"><tr><td style="padding:12px;"><div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#999999;text-transform:uppercase;letter-spacing:0.5px;font-weight:bold;padding-bottom:6px;">% Cierre</div><div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;color:#1a1a1a;">${data.porcentajeCierre.toFixed(1)}%</div></td></tr></table></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:12px 20px 0 20px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td class="kpi-cell" valign="top" width="33.33%" style="padding:0 3px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e0e0e0;border-radius:4px;"><tr><td style="padding:12px;"><div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#999999;text-transform:uppercase;letter-spacing:0.5px;font-weight:bold;padding-bottom:6px;">Tickets Hoy</div><div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;color:#1a1a1a;">${data.ticketsHoy}</div></td></tr></table></td>
+                <td class="kpi-cell" valign="top" width="33.33%" style="padding:0 3px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e0e0e0;border-radius:4px;"><tr><td style="padding:12px;"><div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#999999;text-transform:uppercase;letter-spacing:0.5px;font-weight:bold;padding-bottom:6px;">Esta Semana</div><div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;color:#1a1a1a;">${data.estaSemana}</div></td></tr></table></td>
+                <td class="kpi-cell" valign="top" width="33.33%" style="padding:0 3px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e0e0e0;border-radius:4px;"><tr><td style="padding:12px;"><div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#999999;text-transform:uppercase;letter-spacing:0.5px;font-weight:bold;padding-bottom:6px;">Este Mes</div><div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;color:#1a1a1a;">${data.esteMes}</div></td></tr></table></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:12px 20px 0 20px;">
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td class="kpi-cell" valign="top" width="33.33%" style="padding:0 3px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e0e0e0;border-radius:4px;"><tr><td style="padding:12px;"><div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#999999;text-transform:uppercase;letter-spacing:0.5px;font-weight:bold;padding-bottom:6px;">D&iacute;as Promedio Hasta Cerrar</div><div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;color:#1a1a1a;">${data.diasPromedioHastaCerrar}</div></td></tr></table></td>
+                <td class="kpi-cell" valign="top" width="33.33%" style="padding:0 3px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e0e0e0;border-radius:4px;"><tr><td style="padding:12px;"><div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#999999;text-transform:uppercase;letter-spacing:0.5px;font-weight:bold;padding-bottom:6px;">% Cumplimiento SLA</div><div style="font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:bold;color:#ed712a;">${data.porcentajeCumplimientoSLA.toFixed(1)}%</div></td></tr></table></td>
+                <td class="kpi-cell" valign="top" width="33.33%" style="padding:0 3px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e0e0e0;border-radius:4px;"><tr><td style="padding:12px;"><div style="font-family:Arial,Helvetica,sans-serif;font-size:10px;color:#999999;text-transform:uppercase;letter-spacing:0.5px;font-weight:bold;padding-bottom:8px;">Esta Semana vs Anterior</div><div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#333333;font-weight:bold;padding-bottom:4px;">Creados: <span style="color:#e74c3c;">${data.creadosPct > 0 ? "+" : ""}${data.creadosPct}%</span></div><div style="font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#333333;font-weight:bold;">Cerrados: <span style="color:#e74c3c;">${data.cerradosPct > 0 ? "+" : ""}${data.cerradosPct}%</span></div></td></tr></table></td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:35px 24px 0 24px;">
+            <div style="border-top:1px solid #f0f0f0;padding-top:25px;">
+              <div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;color:#1a1a1a;padding-bottom:20px;">Distribuci&oacute;n por Categor&iacute;a</div>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${categoriaRows}</table>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:35px 24px 0 24px;">
+            <div style="border-top:1px solid #f0f0f0;padding-top:25px;">
+              <div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;color:#1a1a1a;padding-bottom:20px;">Distribuci&oacute;n por Canal</div>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${canalRows}</table>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:35px 24px 0 24px;">
+            <div style="border-top:1px solid #f0f0f0;padding-top:25px;">
+              <div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;color:#1a1a1a;padding-bottom:20px;">Distribuci&oacute;n por Tipo</div>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">${tipoRows}</table>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding:35px 24px 0 24px;">
+            <div style="border-top:1px solid #f0f0f0;padding-top:25px;">
+              <div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;color:#1a1a1a;padding-bottom:20px;">Cumplimiento de SLA</div>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-radius:4px;overflow:hidden;">
+                <tr>
+                  <td bgcolor="#27ae60" width="${slaCompliantPct}%" align="center" style="background-color:#27ae60;height:30px;line-height:30px;mso-line-height-rule:exactly;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;">${slaCompliantPct.toFixed(1)}%</td>
+                  <td bgcolor="#e74c3c" width="${slaExceededPct}%" align="center" style="background-color:#e74c3c;height:30px;line-height:30px;mso-line-height-rule:exactly;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:bold;">${slaExceededPct.toFixed(1)}%</td>
+                </tr>
+              </table>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="padding-top:18px;">
+                <tr>
+                  <td valign="top" width="50%" style="padding:6px 0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+                      <td width="24" valign="middle" style="padding-right:12px;"><table role="presentation" width="20" height="20" cellpadding="0" cellspacing="0" border="0" bgcolor="#27ae60" style="background-color:#27ae60;border-radius:3px;"><tr><td style="height:20px;line-height:20px;font-size:1px;">&nbsp;</td></tr></table></td>
+                      <td valign="middle" style="font-family:Arial,Helvetica,sans-serif;"><div style="font-size:13px;font-weight:bold;color:#27ae60;">Dentro de SLA</div><div style="font-size:16px;font-weight:bold;color:#1a1a1a;">${data.slaCompliant}</div></td>
+                    </tr></table>
+                  </td>
+                  <td valign="top" width="50%" style="padding:6px 0;">
+                    <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
+                      <td width="24" valign="middle" style="padding-right:12px;"><table role="presentation" width="20" height="20" cellpadding="0" cellspacing="0" border="0" bgcolor="#e74c3c" style="background-color:#e74c3c;border-radius:3px;"><tr><td style="height:20px;line-height:20px;font-size:1px;">&nbsp;</td></tr></table></td>
+                      <td valign="middle" style="font-family:Arial,Helvetica,sans-serif;"><div style="font-size:13px;font-weight:bold;color:#e74c3c;">Fuera de SLA</div><div style="font-size:16px;font-weight:bold;color:#1a1a1a;">${data.slaExceeded}</div></td>
+                    </tr></table>
+                  </td>
+                </tr>
+              </table>
+            </div>
+          </td>
+        </tr>
+        <tr><td style="height:30px;line-height:30px;font-size:1px;">&nbsp;</td></tr>
+        <tr>
+          <td bgcolor="#ed712a" align="center" style="background-color:#ed712a;padding:20px 24px;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:12px;">
+            <div style="font-weight:bold;margin-bottom:4px;font-size:14px;">Reporte Autom&aacute;tico - Tiendas 3B</div>
+            <div style="margin-top:4px;opacity:0.9;font-size:10px;">Sistema de An&aacute;lisis de Tickets</div>
+          </td>
+        </tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+}

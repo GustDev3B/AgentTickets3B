@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { createAgentConfig } from "./agent/index.js";
+import { createQueryOptions } from "./agent/index.js";
 
 interface AnalysisResult {
   period: string;
@@ -202,12 +202,14 @@ async function main(): Promise<void> {
 
   console.log("\n📋 Paso 1: Cargar configuración del agente...");
   try {
-    const agentConfig = await createAgentConfig({ mode: "chat" });
+    const agentConfig = await createQueryOptions("chat");
     console.log("✓ Configuración cargada exitosamente");
-    console.log(`  - System prompt: ${agentConfig.systemPrompt.substring(0, 50)}...`);
-    console.log(`  - Subagentes: ${agentConfig.subagents.length}`);
-    agentConfig.subagents.forEach((agent) => {
-      console.log(`    ├─ ${agent.name}: ${agent.description}`);
+    const systemPrompt = typeof agentConfig.systemPrompt === "string" ? agentConfig.systemPrompt : "";
+    console.log(`  - System prompt: ${systemPrompt.substring(0, 50)}...`);
+    const agents = agentConfig.agents ?? {};
+    console.log(`  - Agentes: ${Object.keys(agents).length}`);
+    Object.entries(agents).forEach(([name, def]) => {
+      console.log(`    ├─ ${name}: ${def.description}`);
     });
   } catch (error) {
     console.error(

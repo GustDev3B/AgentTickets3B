@@ -1,56 +1,41 @@
 import { config } from "../config.js";
 import { getFabricMcpConfig } from "../tools/fabric.js";
-import { SYSTEM_PROMPT } from "./prompts.js";
-import { subAgents } from "./subagents.js";
+import { SYSTEM_PROMPT, ANALYST_PROMPT, REPORTER_PROMPT } from "./prompts.js";
+import type { Options } from "@anthropic-ai/claude-agent-sdk";
 
-interface AgentOptions {
-  mode: "chat" | "scheduled";
-}
+const FABRIC_TOOL = "mcp__fabric-data__DataAgent_TKTAgent";
 
-interface McpServerConfig {
-  type: "http";
-  url: string;
-  auth?: {
-    type: "bearer";
-    token: string;
-  };
-}
+export async function createQueryOptions(
+  mode: "chat" | "scheduled",
+  resumeSessionId?: string
+): Promise<Options> {
+  const mcpServers = await getFabricMcpConfig();
 
-export async function createAgentConfig(options: AgentOptions) {
-  const mcpServersConfig = await getFabricMcpConfig();
-
-  return {
+  const options: Options = {
     systemPrompt: SYSTEM_PROMPT,
-    mcpServers: mcpServersConfig as Record<string, McpServerConfig>,
-    subagents: subAgents.map((agent) => ({
-      name: agent.name,
-      description: agent.description,
-      instructions: agent.instructions,
-    })),
-    permissionMode:
-      options.mode === "scheduled" ? "acceptEdits" : ("default" as const),
+    mcpServers,
+    agents: {
+      "data-analyst": {
+        description:
+          "Consulta el Data Lake de Fabric y analiza tickets de soporte retail",
+        prompt: ANALYST_PROMPT,
+        tools: [FABRIC_TOOL],
+      },
+      "report-generator": {
+        description:
+          "Genera reportes HTML profesionales a partir de datos estructurados de tickets",
+        prompt: REPORTER_PROMPT,
+      },
+    },
+    allowedTools: ["Agent", FABRIC_TOOL],
+    permissionMode: "acceptEdits",
+    maxTurns: mode === "scheduled" ? 15 : 5,
     model: config.LLM_MODEL,
   };
-}
 
-export function logToolCall(
-  toolName: string,
-  input: unknown,
-  timestamp: string
-): void {
-  console.log(`[${timestamp}] 🔧 Tool call: ${toolName}`);
-  console.log(`  Input:`, input);
-}
-
-export function logToolResult(
-  toolName: string,
-  result: unknown,
-  timestamp: string
-): void {
-  console.log(`[${timestamp}] ✓ Tool result: ${toolName}`);
-  if (typeof result === "string" && result.length > 200) {
-    console.log(`  Result: ${result.substring(0, 200)}...`);
-  } else {
-    console.log(`  Result:`, result);
+  if (resumeSessionId) {
+    options.resume = resumeSessionId;
   }
+
+  return options;
 }
