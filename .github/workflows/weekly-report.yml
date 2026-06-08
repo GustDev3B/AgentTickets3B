@@ -9,6 +9,8 @@ jobs:
   send-report:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
     steps:
       - name: Checkout repositorio
@@ -17,14 +19,20 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
 
       - name: Instalar dependencias
         run: npm install
 
+      - name: Verificar entorno
+        run: |
+          node --version
+          npm --version
+          ls -la
+
       - name: Ejecutar reporte
-        run: npm run send-official
+        run: npm run send-official 2>&1
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
