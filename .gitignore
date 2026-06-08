@@ -12,4 +12,9 @@ dist/
 *.iml
 .prettier*
 coverage/
-reports/
+# Permitir que reports/ se suba con archivos específicos
+!reports/
+reports/*
+!reports/.gitkeep
+!reports/report-preview.html
+!reports/report-official.html

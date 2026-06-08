@@ -113,7 +113,7 @@ async function main(): Promise<void> {
     console.log(`✓ HTML generado (${html.length} caracteres)`);
 
     // Guardar archivo
-    const filepath = `${reportDir}/reporte-preview.html`;
+    const filepath = `${reportDir}/report-preview.html`;
     writeFileSync(filepath, html, "utf-8");
     console.log(`\n✓ Archivo guardado: ${filepath}`);
 

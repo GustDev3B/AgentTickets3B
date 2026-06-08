@@ -14,11 +14,11 @@
     "test:agent": "tsx src/test-agent.ts",
     "test:fabric": "tsx src/test-fabric-agent.ts",
     "test:full": "tsx src/test-agent-full.ts",
-    "test:flow": "tsx src/test-full-flow.ts",
     "test:ontology": "tsx src/test-ontology.ts",
     "test:template": "tsx src/test-template.ts",
     "test:sp": "tsx src/test-service-principal.ts",
-    "send-email": "tsx src/send-official-email.ts"
+    "send-preview": "tsx src/send-preview.ts",
+    "send-official": "tsx src/send-official.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "*",

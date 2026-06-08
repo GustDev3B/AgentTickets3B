@@ -4,19 +4,20 @@ import { getReportRecipients } from "./config.js";
 import fs from "fs/promises";
 import path from "path";
 
-async function sendOfficialEmail() {
+async function sendPreviewEmail() {
   try {
-    const filePath = path.join(process.cwd(), "reports", "reporte-preview.html");
+    // Leer el archivo de desarrollo que el usuario edita
+    const filePath = path.join(process.cwd(), "reports", "report-preview.html");
 
-    console.log("📄 Leyendo reporte oficial...");
+    console.log("📄 Leyendo reporte de desarrollo...");
     console.log(`   Ruta: ${filePath}\n`);
 
     const htmlContent = await fs.readFile(filePath, "utf-8");
 
     const recipients = getReportRecipients();
-    const subject = `📊 Reporte de Tickets - Tiendas 3B (${new Date().toLocaleDateString("es-BO")})`;
+    const subject = `📊 Reporte de Tickets - Tiendas 3B [DEV] (${new Date().toLocaleDateString("es-BO")})`;
 
-    console.log("🚀 Enviando reporte...\n");
+    console.log("🚀 Enviando reporte de prueba...\n");
 
     const result = await sendReport(htmlContent, subject, recipients);
 
@@ -31,4 +32,4 @@ async function sendOfficialEmail() {
   }
 }
 
-sendOfficialEmail();
+sendPreviewEmail();
