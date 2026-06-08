@@ -6,7 +6,7 @@ dotenv.config({ path: envPath, override: false });
 
 import { config } from "./config.js";
 import { runChatMode } from "./modes/chat.js";
-import { runScheduledMode } from "./modes/scheduled.js";
+import { runScheduledMode } from "./modes/report-agent.js";
 
 async function main(): Promise<void> {
   try {

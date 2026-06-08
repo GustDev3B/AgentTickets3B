@@ -32,7 +32,7 @@ jobs:
           ls -la
 
       - name: Ejecutar reporte
-        run: npm run send-official 2>&1
+        run: npm run report-mcp 2>&1
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
