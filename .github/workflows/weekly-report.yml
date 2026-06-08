@@ -2,7 +2,7 @@ name: Reporte Semanal de Tickets
 
 on:
   schedule:
-    - cron: '5 4 * * 1'  # Lunes 12:05 AM Bolivia (UTC-4 = 04:05 UTC)
+    - cron: '40 17 * * 1'  # Lunes 1:40 PM Bolivia (UTC-4 = 17:40 UTC)
   workflow_dispatch:        # También disparable manualmente
 
 jobs:
