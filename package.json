@@ -7,7 +7,7 @@
   "scripts": {
     "report-preview": "tsx src/report-preview.ts",
     "report-mcp": "tsx src/report-mcp.ts",
-    "report-agent": "tsx src/index.ts scheduled",
+    "report-agentsdk": "tsx src/index.ts scheduled",
     "chat": "tsx src/index.ts chat",
     "test:connection": "tsx src/test-connection.ts",
     "build": "tsc",
