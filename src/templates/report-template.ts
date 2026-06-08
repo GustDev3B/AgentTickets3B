@@ -800,6 +800,7 @@ export interface FabricData {
   slaExceeded: number;
   distribucionCanal: Array<{ nombre: string; cantidad: number }>;
   distribucionTipo: Array<{ nombre: string; cantidad: number }>;
+  analisisInteligente?: string;
 }
 
 export function generateHTMLFromFabricData(data: FabricData): string {
@@ -959,6 +960,21 @@ export function generateHTMLFromFabricData(data: FabricData): string {
             </div>
           </td>
         </tr>
+        ${data.analisisInteligente ? `
+        <tr>
+          <td style="padding:35px 24px 0 24px;">
+            <div style="border-top:1px solid #f0f0f0;padding-top:25px;">
+              <div style="font-family:Arial,Helvetica,sans-serif;font-size:16px;font-weight:bold;color:#1a1a1a;padding-bottom:20px;">An&aacute;lisis Ejecutivo</div>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="border-left:4px solid #ed712a;background-color:#ffffff;padding:20px 24px;">
+                    <p style="font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#333333;line-height:1.7;margin:0;">${data.analisisInteligente.replace(/\n/g, "<br>")}</p>
+                  </td>
+                </tr>
+              </table>
+            </div>
+          </td>
+        </tr>` : ""}
         <tr><td style="height:30px;line-height:30px;font-size:1px;">&nbsp;</td></tr>
         <tr>
           <td bgcolor="#ed712a" align="center" style="background-color:#ed712a;padding:20px 24px;color:#ffffff;font-family:Arial,Helvetica,sans-serif;font-size:12px;">

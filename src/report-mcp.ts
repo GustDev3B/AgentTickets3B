@@ -9,7 +9,7 @@ import { generateHTMLFromFabricData, type FabricData } from "./templates/report-
 const reportDir = "reports";
 mkdirSync(reportDir, { recursive: true });
 
-async function fetchFabricData(): Promise<FabricData> {
+async function fetchFabricData(): Promise<{ data: FabricData; client: FabricMcpClient | null }> {
   console.log("\n📊 PASO 1: Obteniendo datos de Fabric");
   console.log("═".repeat(60));
 
@@ -24,20 +24,20 @@ async function fetchFabricData(): Promise<FabricData> {
   }
 
   const questions = [
-    { key: "estado", q: "Dame estos 5 números exactos en orden: total de tickets, abiertos, cerrados, vencidos, sin asignar. Responde solo: número,número,número,número,número" },
-    { key: "creacion", q: "¿Cuántos tickets en estos períodos? Hoy: X, Esta Semana: Y, Este Mes: Z. Responde: X,Y,Z" },
-    { key: "tiempos", q: "¿Tiempo promedio en horas y % cumplimiento SLA? Dame: 12.5,85.5 (sin unidades)" },
-    { key: "comparativa", q: "Porcentaje cambio creados y cerrados esta semana vs anterior. Dame: +5,-10 (con signo)" },
-    { key: "categoria", q: "¿Cuál es la distribución de tickets por categoría? Formato: - Nombre: cantidad" },
-    { key: "sla", q: "¿Cuántos tickets cumplen SLA y cuántos no cumplen? Formato: - Dentro: número, - Fuera: número" },
-    { key: "canal", q: "¿Cuál es la distribución de tickets por canal de origen? Formato: - Canal: cantidad" },
-    { key: "tipo", q: "¿Cuál es la distribución de tickets por tipo? Formato: - Tipo: cantidad" },
+    { key: "estado",      label: "Obteniendo estado de tickets (abiertos/cerrados/vencidos)", q: "Dame estos 5 números exactos en orden: total de tickets, abiertos, cerrados, vencidos, sin asignar. Responde solo: número,número,número,número,número" },
+    { key: "creacion",    label: "Obteniendo tickets por fecha de creación",                  q: "¿Cuántos tickets en estos períodos? Hoy: X, Esta Semana: Y, Este Mes: Z. Responde: X,Y,Z" },
+    { key: "tiempos",    label: "Obteniendo tiempos de resolución",                          q: "¿Tiempo promedio en horas y % cumplimiento SLA? Dame: 12.5,85.5 (sin unidades)" },
+    { key: "comparativa", label: "Obteniendo comparativa semana anterior",                    q: "Porcentaje cambio creados y cerrados esta semana vs anterior. Dame: +5,-10 (con signo)" },
+    { key: "categoria",   label: "Obteniendo distribución por categoría",                     q: "¿Cuál es la distribución de tickets por categoría? Formato: - Nombre: cantidad" },
+    { key: "sla",         label: "Obteniendo cumplimiento de SLA",                            q: "¿Cuántos tickets cumplen SLA y cuántos no cumplen? Formato: - Dentro: número, - Fuera: número" },
+    { key: "canal",       label: "Obteniendo distribución por canal",                         q: "¿Cuál es la distribución de tickets por canal de origen? Formato: - Canal: cantidad" },
+    { key: "tipo",        label: "Obteniendo distribución por tipo",                          q: "¿Cuál es la distribución de tickets por tipo? Formato: - Tipo: cantidad" },
   ];
 
   const responses: { [key: string]: string } = {};
 
   for (const item of questions) {
-    console.log(`⏳ ${item.key}...`);
+    console.log(`⏳ ${item.label}...`);
     try {
       if (fabricClient) {
         responses[item.key] = await fabricClient.query(item.q);
@@ -137,7 +137,28 @@ async function fetchFabricData(): Promise<FabricData> {
   };
 
   console.log("✓ Datos parseados\n");
-  return data;
+  return { data, client: fabricClient };
+}
+
+function buildAnalysisContext(data: FabricData): string {
+  const lines: string[] = [];
+  for (const [key, value] of Object.entries(data as unknown as Record<string, unknown>)) {
+    if (key === "analisisInteligente") continue;
+    if (Array.isArray(value)) {
+      lines.push(`${key}:`);
+      for (const item of value) {
+        if (typeof item === "object" && item !== null) {
+          const parts = Object.entries(item as Record<string, unknown>)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(", ");
+          lines.push(`  - ${parts}`);
+        }
+      }
+    } else if (value !== null && value !== undefined) {
+      lines.push(`${key}: ${value}`);
+    }
+  }
+  return lines.join("\n");
 }
 
 async function main() {
@@ -149,20 +170,47 @@ async function main() {
   const startTime = Date.now();
 
   try {
-    const data = await fetchFabricData();
+    const { data, client: fabricClient } = await fetchFabricData();
 
-    console.log("\n📄 PASO 2: Regenerando HTML con estructura Outlook");
+    console.log("\n🧠 PASO 2: Análisis Ejecutivo con IA");
+    console.log("═".repeat(60));
+    if (fabricClient) {
+      try {
+        const analysisPrompt = `
+Basándote en estos datos reales del sistema de tickets de Tiendas 3B:
+
+${buildAnalysisContext(data)}
+
+Dame un análisis ejecutivo conciso con:
+1. Situación general del sistema de tickets
+2. Principales anomalías o puntos de atención
+3. Recomendaciones concretas para el equipo de soporte
+4. Tendencia: ¿la operación está mejorando o empeorando?
+
+Responde en español, profesional y directo. Máximo 200 palabras.
+`;
+        const analisis = await fabricClient.query(analysisPrompt);
+        data.analisisInteligente = analisis;
+        console.log("✓ Análisis generado\n");
+      } catch (error) {
+        console.warn("⚠️  No se pudo generar análisis, continuando sin él...\n");
+      }
+    } else {
+      console.log("⚠️  MCP no disponible, omitiendo análisis\n");
+    }
+
+    console.log("\n📄 PASO 3: Regenerando HTML con estructura Outlook");
     console.log("═".repeat(60));
     const html = generateHTMLFromFabricData(data);
     console.log(`✓ HTML regenerado (${html.length} caracteres)\n`);
 
-    console.log("💾 PASO 3: Guardando report-official.html");
+    console.log("💾 PASO 4: Guardando report-official.html");
     console.log("═".repeat(60));
     const filepath = `${reportDir}/report-official.html`;
     writeFileSync(filepath, html, "utf-8");
     console.log(`✓ Reporte guardado en: ${filepath}\n`);
 
-    console.log("📧 PASO 4: Enviando por email");
+    console.log("📧 PASO 5: Enviando por email");
     console.log("═".repeat(60));
     const recipients = getReportRecipients();
     const today = new Date();
